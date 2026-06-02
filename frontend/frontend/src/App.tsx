@@ -5,52 +5,292 @@ const api = axios.create({
   baseURL: "https://inventory-backend-71mk.onrender.com",
 });
 
-type Product = { id: number; name: string; description: string; price: number; stock: number };
+type Product = { id: number; name: string; description: string; price: number; stock_quantity: number; sku: string };
 type Customer = { id: number; name: string; email: string; phone: string };
 type Order = { id: number; customer_id: number; product_id: number; quantity: number; total_price: number };
 
 const NAV = ["Dashboard", "Products", "Customers", "Orders"];
 
-function Badge({ color, children }: { color: string; children: React.ReactNode }) {
-  const colors: Record<string, string> = {
-    green: "background:#eaf3de;color:#3b6d11",
-    red: "background:#fcebeb;color:#a32d2d",
-    blue: "background:#e6f1fb;color:#185fa5",
-    amber: "background:#faeeda;color:#854f0b",
-  };
-  return (
-    <span style={{
-      ...Object.fromEntries(colors[color].split(";").map(s => s.split(":") as [string,string])),
-      fontSize: 12, padding: "2px 10px", borderRadius: 99, fontWeight: 500
-    }}>{children}</span>
-  );
-}
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
 
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: number | string; color: string }) {
-  const bg: Record<string, string> = { blue: "#e6f1fb", green: "#eaf3de", amber: "#faeeda", purple: "#eeedfe" };
-  const fg: Record<string, string> = { blue: "#185fa5", green: "#3b6d11", amber: "#854f0b", purple: "#533ab7" };
-  return (
-    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: 14 }}>
-      <div style={{ width: 44, height: 44, borderRadius: 10, background: bg[color], display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <i className={`ti ti-${icon}`} style={{ fontSize: 22, color: fg[color] }} aria-hidden="true" />
-      </div>
-      <div>
-        <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{label}</p>
-        <p style={{ margin: 0, fontSize: 22, fontWeight: 500, color: "var(--color-text-primary)" }}>{value}</p>
-      </div>
-    </div>
-  );
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --accent: #7c6af7;
+    --accent2: #f7c26a;
+    --accent3: #6af7c2;
+    --text: #f0eff8;
+    --muted: #6b6a7e;
+    --danger: #f76a6a;
+    --success: #6af7c2;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; }
+
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  .nav {
+    display: flex; align-items: center; gap: 4px;
+    padding: 0 32px; height: 60px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,15,0.9);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .nav-logo {
+    font-size: 18px; font-weight: 800; letter-spacing: -0.5px;
+    color: var(--text); margin-right: 24px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .nav-logo span {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  .nav-btn {
+    padding: 6px 16px; border-radius: 8px; border: none;
+    cursor: pointer; font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 500; transition: all 0.15s;
+    background: transparent; color: var(--muted);
+  }
+
+  .nav-btn:hover { color: var(--text); background: var(--surface2); }
+  .nav-btn.active { color: var(--accent); background: rgba(124,106,247,0.12); }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 40px 32px; width: 100%; }
+
+  .page-title {
+    font-size: 32px; font-weight: 800; letter-spacing: -1px;
+    margin-bottom: 28px; color: var(--text);
+  }
+
+  .page-title span { color: var(--accent); }
+
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px 24px;
+    transition: border-color 0.2s;
+  }
+
+  .stat-card:hover { border-color: var(--accent); }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -1px; color: var(--text);
+  }
+
+  .stat-icon {
+    font-size: 20px; margin-bottom: 12px;
+  }
+
+  .quick-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .quick-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px;
+    cursor: pointer; text-align: left;
+    transition: all 0.2s; font-family: 'Syne', sans-serif;
+  }
+
+  .quick-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(124,106,247,0.15);
+  }
+
+  .quick-card-icon { font-size: 24px; margin-bottom: 12px; }
+  .quick-card-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .quick-card-desc { font-size: 12px; color: var(--muted); }
+
+  .section-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 20px;
+  }
+
+  .add-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 20px; border-radius: 10px; border: none;
+    background: var(--accent); color: white;
+    font-family: 'Syne', sans-serif; font-size: 13px;
+    font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+
+  .add-btn:hover { background: #6a58e6; transform: translateY(-1px); }
+
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead tr { background: var(--surface2); }
+
+  th {
+    padding: 12px 20px; text-align: left;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+
+  td { padding: 14px 20px; font-size: 14px; }
+
+  tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
+
+  tr:hover td { background: rgba(124,106,247,0.04); }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px; border-radius: 99px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; font-weight: 500;
+  }
+
+  .badge-green { background: rgba(106,247,194,0.12); color: var(--accent3); }
+  .badge-amber { background: rgba(247,194,106,0.12); color: var(--accent2); }
+  .badge-red { background: rgba(247,106,106,0.12); color: var(--danger); }
+  .badge-blue { background: rgba(124,106,247,0.15); color: var(--accent); }
+
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 15px;
+    padding: 4px 8px; border-radius: 6px;
+    transition: all 0.15s;
+  }
+
+  .del-btn:hover { color: var(--danger); background: rgba(247,106,106,0.1); }
+
+  .empty-row td {
+    text-align: center; padding: 40px;
+    color: var(--muted); font-family: 'DM Mono', monospace;
+    font-size: 13px;
+  }
+
+  .error-msg {
+    color: var(--danger); font-size: 13px;
+    margin-bottom: 12px; padding: 10px 16px;
+    background: rgba(247,106,106,0.1);
+    border-radius: 8px; border: 1px solid rgba(247,106,106,0.2);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .loading { color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px; padding: 20px 0; }
+
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 28px;
+    width: 440px; max-width: 90vw;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  }
+
+  .modal-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 24px;
+  }
+
+  .modal-title { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+
+  .close-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    width: 32px; height: 32px; border-radius: 8px;
+    cursor: pointer; color: var(--muted);
+    font-size: 16px; display: flex; align-items: center;
+    justify-content: center; transition: all 0.15s;
+  }
+
+  .close-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .field { margin-bottom: 16px; }
+
+  .field label {
+    display: block; font-family: 'DM Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select {
+    width: 100%; padding: 10px 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text);
+    font-family: 'Syne', sans-serif; font-size: 14px;
+    transition: border-color 0.15s; outline: none;
+  }
+
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface2); }
+
+  .submit-btn {
+    width: 100%; padding: 12px;
+    background: linear-gradient(135deg, var(--accent), #9b8cf9);
+    border: none; border-radius: 10px; color: white;
+    font-family: 'Syne', sans-serif; font-size: 14px;
+    font-weight: 700; cursor: pointer; margin-top: 8px;
+    transition: all 0.15s; letter-spacing: 0.3px;
+  }
+
+  .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  .avatar {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white; flex-shrink: 0;
+  }
+
+  .name-cell { display: flex; align-items: center; gap: 10px; }
+  .name-cell .name { font-weight: 600; }
+  .mono { font-family: 'DM Mono', monospace; font-size: 12px; }
+`;
+
+function Badge({ color, children }: { color: string; children: React.ReactNode }) {
+  return <span className={`badge badge-${color}`}>{children}</span>;
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 }}>
-      <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 14, padding: "1.5rem", width: 420, maxWidth: "90vw" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 500 }}>{title}</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--color-text-secondary)" }}>
-            <i className="ti ti-x" />
-          </button>
+    <div className="overlay">
+      <div className="modal">
+        <div className="modal-header">
+          <h2 className="modal-title">{title}</h2>
+          <button className="close-btn" onClick={onClose}>✕</button>
         </div>
         {children}
       </div>
@@ -58,17 +298,15 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function InputField({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string | number; onChange: (v: string) => void; placeholder?: string }) {
+function Field({ label, type = "text", value, onChange }: { label: string; type?: string; value: string | number; onChange: (v: string) => void }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ display: "block", fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 5 }}>{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        style={{ width: "100%", padding: "8px 12px", border: "0.5px solid var(--color-border-secondary)", borderRadius: 8, fontSize: 14, background: "var(--color-background-primary)", color: "var(--color-text-primary)", boxSizing: "border-box" }} />
+    <div className="field">
+      <label>{label}</label>
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} />
     </div>
   );
 }
 
-// ─── Products ───────────────────────────────────────────────────────────────
 function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +319,8 @@ function Products() {
 
   const add = async () => {
     try {
-      await api.post("/products/", { name: form.name, description: form.description, price: parseFloat(form.price), stock: parseInt(form.stock) });
+      const sku = form.name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
+      await api.post("/products/", { sku, name: form.name, description: form.description, price: parseFloat(form.price), stock_quantity: parseInt(form.stock) });
       setShowAdd(false); setForm({ name: "", description: "", price: "", stock: "" }); load();
     } catch { setError("Failed to add product"); }
   };
@@ -90,57 +329,45 @@ function Products() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500 }}>Products</h2>
-        <button onClick={() => setShowAdd(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "var(--color-text-primary)", color: "var(--color-background-primary)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14 }}>
-          <i className="ti ti-plus" aria-hidden="true" /> Add Product
-        </button>
+      <div className="section-header">
+        <h1 className="page-title">Prod<span>ucts</span></h1>
+        <button className="add-btn" onClick={() => { setError(""); setShowAdd(true); }}>+ Add Product</button>
       </div>
-      {error && <p style={{ color: "var(--color-text-danger)", fontSize: 13 }}>{error}</p>}
-      {loading ? <p style={{ color: "var(--color-text-secondary)" }}>Loading…</p> : (
-        <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: "var(--color-background-secondary)" }}>
-                {["Name", "Description", "Price", "Stock", ""].map(h => (
-                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", borderBottom: "0.5px solid var(--color-border-tertiary)" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+      {error && <div className="error-msg">{error}</div>}
+      {loading ? <p className="loading">Loading products...</p> : (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>SKU</th><th>Name</th><th>Description</th><th>Price</th><th>Stock</th><th></th></tr></thead>
             <tbody>
-              {products.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding: 24, textAlign: "center", color: "var(--color-text-secondary)" }}>No products yet</td></tr>
-              ) : products.map((p, i) => (
-                <tr key={p.id} style={{ borderTop: i > 0 ? "0.5px solid var(--color-border-tertiary)" : "none" }}>
-                  <td style={{ padding: "12px 16px", fontWeight: 500 }}>{p.name}</td>
-                  <td style={{ padding: "12px 16px", color: "var(--color-text-secondary)" }}>{p.description}</td>
-                  <td style={{ padding: "12px 16px" }}>₹{p.price.toFixed(2)}</td>
-                  <td style={{ padding: "12px 16px" }}><Badge color={p.stock > 10 ? "green" : p.stock > 0 ? "amber" : "red"}>{p.stock} units</Badge></td>
-                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                    <button onClick={() => del(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-danger)" }}>
-                      <i className="ti ti-trash" style={{ fontSize: 16 }} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {products.length === 0
+                ? <tr className="empty-row"><td colSpan={6}>— no products yet —</td></tr>
+                : products.map((p, i) => (
+                  <tr key={p.id}>
+                    <td><span className="mono" style={{ color: "var(--muted)" }}>{p.sku}</span></td>
+                    <td style={{ fontWeight: 600 }}>{p.name}</td>
+                    <td style={{ color: "var(--muted)", fontSize: 13 }}>{p.description}</td>
+                    <td><span className="mono">₹{p.price?.toFixed(2)}</span></td>
+                    <td><Badge color={p.stock_quantity > 10 ? "green" : p.stock_quantity > 0 ? "amber" : "red"}>{p.stock_quantity} units</Badge></td>
+                    <td><button className="del-btn" onClick={() => del(p.id)}>🗑</button></td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
       )}
       {showAdd && (
-        <Modal title="Add Product" onClose={() => setShowAdd(false)}>
-          <InputField label="Name" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} />
-          <InputField label="Description" value={form.description} onChange={v => setForm(f => ({ ...f, description: v }))} />
-          <InputField label="Price" type="number" value={form.price} onChange={v => setForm(f => ({ ...f, price: v }))} />
-          <InputField label="Stock" type="number" value={form.stock} onChange={v => setForm(f => ({ ...f, stock: v }))} />
-          <button onClick={add} style={{ width: "100%", padding: "10px", background: "var(--color-text-primary)", color: "var(--color-background-primary)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14, marginTop: 6 }}>Add Product</button>
+        <Modal title="New Product" onClose={() => setShowAdd(false)}>
+          <Field label="Product Name" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} />
+          <Field label="Description" value={form.description} onChange={v => setForm(f => ({ ...f, description: v }))} />
+          <Field label="Price (₹)" type="number" value={form.price} onChange={v => setForm(f => ({ ...f, price: v }))} />
+          <Field label="Stock Quantity" type="number" value={form.stock} onChange={v => setForm(f => ({ ...f, stock: v }))} />
+          <button className="submit-btn" onClick={add}>Create Product →</button>
         </Modal>
       )}
     </div>
   );
 }
 
-// ─── Customers ──────────────────────────────────────────────────────────────
 function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,62 +389,47 @@ function Customers() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500 }}>Customers</h2>
-        <button onClick={() => setShowAdd(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "var(--color-text-primary)", color: "var(--color-background-primary)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14 }}>
-          <i className="ti ti-plus" aria-hidden="true" /> Add Customer
-        </button>
+      <div className="section-header">
+        <h1 className="page-title">Custo<span>mers</span></h1>
+        <button className="add-btn" onClick={() => { setError(""); setShowAdd(true); }}>+ Add Customer</button>
       </div>
-      {error && <p style={{ color: "var(--color-text-danger)", fontSize: 13 }}>{error}</p>}
-      {loading ? <p style={{ color: "var(--color-text-secondary)" }}>Loading…</p> : (
-        <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: "var(--color-background-secondary)" }}>
-                {["Name", "Email", "Phone", ""].map(h => (
-                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", borderBottom: "0.5px solid var(--color-border-tertiary)" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+      {error && <div className="error-msg">{error}</div>}
+      {loading ? <p className="loading">Loading customers...</p> : (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th></th></tr></thead>
             <tbody>
-              {customers.length === 0 ? (
-                <tr><td colSpan={4} style={{ padding: 24, textAlign: "center", color: "var(--color-text-secondary)" }}>No customers yet</td></tr>
-              ) : customers.map((c, i) => (
-                <tr key={c.id} style={{ borderTop: i > 0 ? "0.5px solid var(--color-border-tertiary)" : "none" }}>
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#e6f1fb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: "#185fa5" }}>
-                        {c.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+              {customers.length === 0
+                ? <tr className="empty-row"><td colSpan={4}>— no customers yet —</td></tr>
+                : customers.map(c => (
+                  <tr key={c.id}>
+                    <td>
+                      <div className="name-cell">
+                        <div className="avatar">{c.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}</div>
+                        <span className="name">{c.name}</span>
                       </div>
-                      <span style={{ fontWeight: 500 }}>{c.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: "12px 16px", color: "var(--color-text-secondary)" }}>{c.email}</td>
-                  <td style={{ padding: "12px 16px", color: "var(--color-text-secondary)" }}>{c.phone}</td>
-                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                    <button onClick={() => del(c.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-danger)" }}>
-                      <i className="ti ti-trash" style={{ fontSize: 16 }} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td style={{ color: "var(--muted)", fontSize: 13 }}>{c.email}</td>
+                    <td><span className="mono" style={{ color: "var(--muted)" }}>{c.phone}</span></td>
+                    <td><button className="del-btn" onClick={() => del(c.id)}>🗑</button></td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
       )}
       {showAdd && (
-        <Modal title="Add Customer" onClose={() => setShowAdd(false)}>
-          <InputField label="Name" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} />
-          <InputField label="Email" type="email" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} />
-          <InputField label="Phone" value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} />
-          <button onClick={add} style={{ width: "100%", padding: "10px", background: "var(--color-text-primary)", color: "var(--color-background-primary)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14, marginTop: 6 }}>Add Customer</button>
+        <Modal title="New Customer" onClose={() => setShowAdd(false)}>
+          <Field label="Full Name" value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} />
+          <Field label="Email Address" type="email" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} />
+          <Field label="Phone Number" value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} />
+          <button className="submit-btn" onClick={add}>Add Customer →</button>
         </Modal>
       )}
     </div>
   );
 }
 
-// ─── Orders ─────────────────────────────────────────────────────────────────
 function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -248,66 +460,55 @@ function Orders() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 500 }}>Orders</h2>
-        <button onClick={() => setShowAdd(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", background: "var(--color-text-primary)", color: "var(--color-background-primary)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14 }}>
-          <i className="ti ti-plus" aria-hidden="true" /> New Order
-        </button>
+      <div className="section-header">
+        <h1 className="page-title">Ord<span>ers</span></h1>
+        <button className="add-btn" onClick={() => { setError(""); setShowAdd(true); }}>+ New Order</button>
       </div>
-      {error && <p style={{ color: "var(--color-text-danger)", fontSize: 13 }}>{error}</p>}
-      {loading ? <p style={{ color: "var(--color-text-secondary)" }}>Loading…</p> : (
-        <div style={{ border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: "var(--color-background-secondary)" }}>
-                {["Order ID", "Customer", "Product", "Qty", "Total"].map(h => (
-                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", borderBottom: "0.5px solid var(--color-border-tertiary)" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+      {error && <div className="error-msg">{error}</div>}
+      {loading ? <p className="loading">Loading orders...</p> : (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Product</th><th>Qty</th><th>Total</th></tr></thead>
             <tbody>
-              {orders.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding: 24, textAlign: "center", color: "var(--color-text-secondary)" }}>No orders yet</td></tr>
-              ) : orders.map((o, i) => (
-                <tr key={o.id} style={{ borderTop: i > 0 ? "0.5px solid var(--color-border-tertiary)" : "none" }}>
-                  <td style={{ padding: "12px 16px" }}><Badge color="blue">#{o.id}</Badge></td>
-                  <td style={{ padding: "12px 16px", fontWeight: 500 }}>{customerName(o.customer_id)}</td>
-                  <td style={{ padding: "12px 16px", color: "var(--color-text-secondary)" }}>{productName(o.product_id)}</td>
-                  <td style={{ padding: "12px 16px" }}>{o.quantity}</td>
-                  <td style={{ padding: "12px 16px", fontWeight: 500 }}>₹{o.total_price?.toFixed(2)}</td>
-                </tr>
-              ))}
+              {orders.length === 0
+                ? <tr className="empty-row"><td colSpan={5}>— no orders yet —</td></tr>
+                : orders.map(o => (
+                  <tr key={o.id}>
+                    <td><Badge color="blue">#{o.id}</Badge></td>
+                    <td style={{ fontWeight: 600 }}>{customerName(o.customer_id)}</td>
+                    <td style={{ color: "var(--muted)" }}>{productName(o.product_id)}</td>
+                    <td><span className="mono">{o.quantity}</span></td>
+                    <td><span className="mono" style={{ color: "var(--accent3)", fontWeight: 600 }}>₹{o.total_price?.toFixed(2)}</span></td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
       )}
       {showAdd && (
         <Modal title="New Order" onClose={() => setShowAdd(false)}>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 5 }}>Customer</label>
-            <select value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))}
-              style={{ width: "100%", padding: "8px 12px", border: "0.5px solid var(--color-border-secondary)", borderRadius: 8, fontSize: 14, background: "var(--color-background-primary)", color: "var(--color-text-primary)" }}>
+          <div className="field">
+            <label>Customer</label>
+            <select value={form.customer_id} onChange={e => setForm(f => ({ ...f, customer_id: e.target.value }))}>
               <option value="">Select customer</option>
               {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 5 }}>Product</label>
-            <select value={form.product_id} onChange={e => setForm(f => ({ ...f, product_id: e.target.value }))}
-              style={{ width: "100%", padding: "8px 12px", border: "0.5px solid var(--color-border-secondary)", borderRadius: 8, fontSize: 14, background: "var(--color-background-primary)", color: "var(--color-text-primary)" }}>
+          <div className="field">
+            <label>Product</label>
+            <select value={form.product_id} onChange={e => setForm(f => ({ ...f, product_id: e.target.value }))}>
               <option value="">Select product</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.name} (stock: {p.stock})</option>)}
+              {products.map(p => <option key={p.id} value={p.id}>{p.name} (stock: {p.stock_quantity})</option>)}
             </select>
           </div>
-          <InputField label="Quantity" type="number" value={form.quantity} onChange={v => setForm(f => ({ ...f, quantity: v }))} />
-          <button onClick={add} style={{ width: "100%", padding: "10px", background: "var(--color-text-primary)", color: "var(--color-background-primary)", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14, marginTop: 6 }}>Place Order</button>
+          <Field label="Quantity" type="number" value={form.quantity} onChange={v => setForm(f => ({ ...f, quantity: v }))} />
+          <button className="submit-btn" onClick={add}>Place Order →</button>
         </Modal>
       )}
     </div>
   );
 }
 
-// ─── Dashboard ───────────────────────────────────────────────────────────────
 function Dashboard({ setTab }: { setTab: (t: string) => void }) {
   const [stats, setStats] = useState({ products: 0, customers: 0, orders: 0, revenue: 0 });
   useEffect(() => {
@@ -315,31 +516,36 @@ function Dashboard({ setTab }: { setTab: (t: string) => void }) {
       .then(([p, c, o]) => {
         const revenue = o.data.reduce((sum: number, ord: Order) => sum + (ord.total_price ?? 0), 0);
         setStats({ products: p.data.length, customers: c.data.length, orders: o.data.length, revenue });
-      });
+      }).catch(() => {});
   }, []);
 
   return (
     <div>
-      <h2 style={{ margin: "0 0 20px", fontSize: 20, fontWeight: 500 }}>Dashboard</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 28 }}>
-        <StatCard icon="package" label="Products" value={stats.products} color="blue" />
-        <StatCard icon="users" label="Customers" value={stats.customers} color="purple" />
-        <StatCard icon="shopping-cart" label="Orders" value={stats.orders} color="amber" />
-        <StatCard icon="currency-rupee" label="Revenue" value={`₹${stats.revenue.toFixed(0)}`} color="green" />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+      <h1 className="page-title">Over<span>view</span></h1>
+      <div className="stat-grid">
         {[
-          { icon: "package", label: "Manage Products", desc: "Add, update, track stock", tab: "Products", color: "blue" },
-          { icon: "users", label: "Manage Customers", desc: "View and add customers", tab: "Customers", color: "purple" },
-          { icon: "shopping-cart", label: "Manage Orders", desc: "Create and view orders", tab: "Orders", color: "amber" },
-        ].map(card => (
-          <button key={card.tab} onClick={() => setTab(card.tab)}
-            style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 12, padding: "1.25rem", textAlign: "left", cursor: "pointer", transition: "border-color 0.15s" }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--color-border-secondary)")}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--color-border-tertiary)")}>
-            <i className={`ti ti-${card.icon}`} style={{ fontSize: 24, color: card.color === "blue" ? "#185fa5" : card.color === "purple" ? "#533ab7" : "#854f0b", marginBottom: 10, display: "block" }} aria-hidden="true" />
-            <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 15 }}>{card.label}</p>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{card.desc}</p>
+          { icon: "📦", label: "Products", value: stats.products },
+          { icon: "👥", label: "Customers", value: stats.customers },
+          { icon: "🛒", label: "Orders", value: stats.orders },
+          { icon: "💰", label: "Revenue", value: `₹${stats.revenue.toFixed(0)}` },
+        ].map(s => (
+          <div className="stat-card" key={s.label}>
+            <div className="stat-icon">{s.icon}</div>
+            <div className="stat-label">{s.label}</div>
+            <div className="stat-value">{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div className="quick-grid">
+        {[
+          { icon: "📦", title: "Products", desc: "Manage your inventory stock", tab: "Products" },
+          { icon: "👥", title: "Customers", desc: "View and manage customers", tab: "Customers" },
+          { icon: "🛒", title: "Orders", desc: "Track and create orders", tab: "Orders" },
+        ].map(c => (
+          <button className="quick-card" key={c.tab} onClick={() => setTab(c.tab)}>
+            <div className="quick-card-icon">{c.icon}</div>
+            <div className="quick-card-title">{c.title}</div>
+            <div className="quick-card-desc">{c.desc}</div>
           </button>
         ))}
       </div>
@@ -347,30 +553,29 @@ function Dashboard({ setTab }: { setTab: (t: string) => void }) {
   );
 }
 
-// ─── App ─────────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("Dashboard");
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary, #f5f5f3)", fontFamily: "var(--font-sans, system-ui, sans-serif)" }}>
-      <nav style={{ background: "var(--color-background-primary)", borderBottom: "0.5px solid var(--color-border-tertiary)", padding: "0 24px", display: "flex", alignItems: "center", gap: 8, height: 56 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 24 }}>
-          <i className="ti ti-box" style={{ fontSize: 20, color: "#185fa5" }} aria-hidden="true" />
-          <span style={{ fontWeight: 500, fontSize: 15 }}>Inventory</span>
-        </div>
-        {NAV.map(n => (
-          <button key={n} onClick={() => setTab(n)}
-            style={{ padding: "6px 14px", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: tab === n ? 500 : 400, background: tab === n ? "var(--color-background-secondary)" : "transparent", color: tab === n ? "var(--color-text-primary)" : "var(--color-text-secondary)", transition: "all 0.15s" }}>
-            {n}
-          </button>
-        ))}
-      </nav>
-      <main style={{ maxWidth: 960, margin: "0 auto", padding: "28px 24px" }}>
-        {tab === "Dashboard" && <Dashboard setTab={setTab} />}
-        {tab === "Products" && <Products />}
-        {tab === "Customers" && <Customers />}
-        {tab === "Orders" && <Orders />}
-      </main>
-    </div>
+    <>
+      <style>{styles}</style>
+      <div className="app">
+        <nav className="nav">
+          <div className="nav-logo">
+            <span>⬡</span>
+            INVNT
+          </div>
+          {NAV.map(n => (
+            <button key={n} className={`nav-btn ${tab === n ? "active" : ""}`} onClick={() => setTab(n)}>{n}</button>
+          ))}
+        </nav>
+        <main className="main">
+          {tab === "Dashboard" && <Dashboard setTab={setTab} />}
+          {tab === "Products" && <Products />}
+          {tab === "Customers" && <Customers />}
+          {tab === "Orders" && <Orders />}
+        </main>
+      </div>
+    </>
   );
 }

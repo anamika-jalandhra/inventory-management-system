@@ -1,0 +1,164 @@
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f8fafc;
+  --color-background-tertiary: #f1f5f9;
+
+  --color-border-secondary: #dbe1e8;
+  --color-border-tertiary: #e5e7eb;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+
+  --primary: #2563eb;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Tables */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.4px;
+}
+
+td,
+th {
+  padding: 12px 16px;
+}
+
+/* Inputs */
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  background: white;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Buttons */
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Cards */
+
+.card {
+  background: white;
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Dashboard Cards */
+
+.stat-card {
+  background: white;
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: 14px;
+  padding: 20px;
+  transition: 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+/* Modal */
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.18);
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  body {
+    font-size: 14px;
+  }
+}
